@@ -46,3 +46,10 @@ jobs:
                 name: webapp
                 path: publish
                 retention-days: 7
+    deploy:
+        needs: build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: ./.github/workflows/cd-workflow.yml
+        with:
+            environment: production
+        secrets: inherit
