@@ -22,10 +22,10 @@ jobs:
         steps:
             - name: 'Clone the Repo'
               uses: actions/checkout@v7
-            - name: 'Setup .NET'
-              uses: actions/setup-dotnet@v6
-              with:
-                dotnet-version: ${{env.DOTNET_VERSION}}
+            # - name: 'Setup .NET'
+            #   uses: actions/setup-dotnet@v6
+            #   with:
+            #     dotnet-version: ${{env.DOTNET_VERSION}}
             - name: Restore packages
               run: dotnet restore ${{env.SOLUTION}}
             - name: Build the app
