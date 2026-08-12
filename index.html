@@ -79,6 +79,17 @@
             font-weight: bold;
             text-transform: uppercase;
         }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
 
         .posts { display: grid; gap: 1.5rem; }
         article, .sidebar-card {
@@ -133,25 +144,25 @@
 
         <main>
             <section id="latest" aria-labelledby="latest-heading">
-                <p class="section-label" id="latest-heading">From the notebook</p>
+                <h2 class="section-label" id="latest-heading">From the notebook</h2>
                 <div class="posts">
-                    <article>
+                    <article id="hand-drawn-homepage">
                         <p class="post-meta">JUN 12, 2024 · 6 MIN READ</p>
                         <h2>Why I still love a hand-drawn homepage</h2>
                         <p>Perfect grids are useful, but a little wobble makes a website feel human. Here are a few low-tech ways to give your next page some personality.</p>
-                        <a class="read-more" href="#latest">Read the dispatch →</a>
+                        <a class="read-more" href="#hand-drawn-homepage">Read the dispatch <span class="sr-only">about hand-drawn homepages</span> →</a>
                     </article>
-                    <article>
+                    <article id="tiny-projects">
                         <p class="post-meta">MAY 28, 2024 · 4 MIN READ</p>
                         <h2>Building a creative habit with tiny projects</h2>
                         <p>Big ambitions are easier to keep when they fit in an afternoon. A field guide to making small, joyful things just to see what happens.</p>
-                        <a class="read-more" href="#latest">Read the dispatch →</a>
+                        <a class="read-more" href="#tiny-projects">Read the dispatch <span class="sr-only">about tiny projects</span> →</a>
                     </article>
-                    <article>
+                    <article id="offline-web">
                         <p class="post-meta">MAY 03, 2024 · 8 MIN READ</p>
                         <h2>A love letter to the offline web</h2>
                         <p>Before every page needed an account and a feed, the web was a collection of curious places. Let's bring back a little of that magic.</p>
-                        <a class="read-more" href="#latest">Read the dispatch →</a>
+                        <a class="read-more" href="#offline-web">Read the dispatch <span class="sr-only">about the offline web</span> →</a>
                     </article>
                 </div>
             </section>
@@ -161,15 +172,15 @@
                     <span class="sticker">HELLO, FRIEND!</span>
                     <h2 id="about-heading">Meet the editor</h2>
                     <p>I'm Alex, a designer and enthusiastic collector of nice type, old magazines, and half-finished ideas.</p>
-                    <a class="read-more" href="#about">More about Pixel &amp; Paper →</a>
+                    <span class="read-more">More about Pixel &amp; Paper · coming soon</span>
                 </section>
                 <section class="sidebar-card" id="topics" aria-labelledby="topics-heading">
                     <h2 id="topics-heading">Browse topics</h2>
                     <ul>
-                        <li><a href="#topics">Design &amp; craft</a></li>
-                        <li><a href="#topics">Digital gardens</a></li>
-                        <li><a href="#topics">Creative practice</a></li>
-                        <li><a href="#topics">Internet culture</a></li>
+                        <li>Design &amp; craft <small>(coming soon)</small></li>
+                        <li>Digital gardens <small>(coming soon)</small></li>
+                        <li>Creative practice <small>(coming soon)</small></li>
+                        <li>Internet culture <small>(coming soon)</small></li>
                     </ul>
                 </section>
             </aside>
