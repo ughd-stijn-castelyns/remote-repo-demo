@@ -11,8 +11,38 @@ on:
             - 'src/**'
     workflow_dispatch: 
 
+env:
+    SOLUTION: src/ExampleWebApp.slnx
+    DOTNET_VERSION: '10.0.x'
+    WEB_PROJECT: src/ExampleWebApp/ExampleWebApp.csproj
+
 jobs:
     build:
         runs-on: self-hosted
         steps:
-            - run: echo 'Hello World'
+            - name: 'Clone the Repo'
+              uses: actions/checkout@v7
+            - name: 'Setup .NET'
+              uses: actions/setup-dotnet@v6
+              with:
+                dotnet-version: ${{env.DOTNET_VERSION}}
+            - name: Restore packages
+              run: dotnet restore ${{env.SOLUTION}}
+            - name: Build the app
+              run: >
+                dotnet build ${{env.SOLUTION}}
+                --configuration Release
+                --no-restore
+                -p:ContinuousIntegrationBuild=true
+            - name: Publish the app
+              run: >
+                dotnet publish ${{env.WEB_PROJECT}}
+                --configuration Release
+                --no-build
+                --output ./publish
+            - name: Upload the artifact
+              uses: actions/upload-artifact@v7
+              with:
+                name: webapp
+                path: publish
+                retention-days: 7
