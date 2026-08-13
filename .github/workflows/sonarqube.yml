@@ -5,6 +5,12 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
+env:
+    SOLUTION: src/ExampleWebApp.slnx
+    DOTNET_VERSION: '10.0.x'
+    WEB_PROJECT: src/ExampleWebApp/ExampleWebApp.csproj
+
 jobs:
   build:
     name: Build and analyze
@@ -43,5 +49,5 @@ jobs:
         shell: powershell
         run: |
           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"ughd-stijn-castelyns_remote-repo-demo" /o:"ughd-stijn-castelyns" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          dotnet build
+          dotnet build ${{env.SOLUTION}}
           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
