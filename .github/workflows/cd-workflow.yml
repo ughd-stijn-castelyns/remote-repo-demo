@@ -93,9 +93,9 @@ jobs:
         if: inputs.canary-traffic-percent != 0
         run: |
           set -euo pipefail
-          az webapp traffic-routing set \
-            --name "${{ inputs.app-name }}" \
-            --resource-group "${{ inputs.resource-group }}" \
+          az webapp traffic-routing set `
+            --name "${{ inputs.app-name }}" `
+            --resource-group "${{ inputs.resource-group }}" `
             --distribution "${{ inputs.slot-name }}=${{ inputs.canary-traffic-percent }}"
           echo "${{ inputs.canary-traffic-percent }}% of production traffic now hits the canary slot."
 
@@ -123,22 +123,22 @@ jobs:
       - name: Reset traffic routing
         run: |
           set -euo pipefail
-          az webapp traffic-routing clear \
-            --name "${{ inputs.app-name }}" \
+          az webapp traffic-routing clear `
+            --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}"
 
       - name: Swap canary into production
         id: swap
         run: |
           set -euo pipefail
-          az webapp deployment slot swap \
-            --name "${{ inputs.app-name }}" \
-            --resource-group "${{ inputs.resource-group }}" \
-            --slot "${{ inputs.slot-name }}" \
+          az webapp deployment slot swap `
+            --name "${{ inputs.app-name }}" `
+            --resource-group "${{ inputs.resource-group }}" `
+            --slot "${{ inputs.slot-name }}" `
             --target-slot production
-          host=$(az webapp show \
-            --name "${{ inputs.app-name }}" \
-            --resource-group "${{ inputs.resource-group }}" \
+          host=$(az webapp show `
+            --name "${{ inputs.app-name }}" `
+            --resource-group "${{ inputs.resource-group }}" `
             --query defaultHostName -o tsv)
           echo "production-url=https://${host}" >> "$GITHUB_OUTPUT"
 
@@ -179,16 +179,16 @@ jobs:
       - name: Send all traffic back to production
         run: |
           set -euo pipefail
-          az webapp traffic-routing clear \
-            --name "${{ inputs.app-name }}" \
+          az webapp traffic-routing clear `
+            --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}"
           echo "Traffic routing cleared; production slot serves 100% of requests."
 
       - name: Note for operators
         run: |
           echo "::warning::Canary rolled back. If the swap already completed, run:"
-          echo "az webapp deployment slot swap --name ${{ inputs.app-name }} \
-            --resource-group ${{ inputs.resource-group }} \
+          echo "az webapp deployment slot swap --name ${{ inputs.app-name }} `
+            --resource-group ${{ inputs.resource-group }} `
             --slot ${{ inputs.slot-name }} --target-slot production"
 
       - name: Logout
