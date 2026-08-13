@@ -1,0 +1,14 @@
+name: Key vault demo
+
+on:
+    workflow_dispatch: 
+
+jobs:
+    readkv:
+        runs-on: self-hosted
+        steps:
+            - name: Azure Login
+              uses: azure/login@v2
+              with:
+                creds: ${{ secrets.AZURE_CREDENTIALS }}
+            - run: az keyvault secret show --vault-name ughdkv --name MySecret
