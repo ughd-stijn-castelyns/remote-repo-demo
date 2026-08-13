@@ -12,6 +12,23 @@ on:
         type: string
         default: ''
         description: Run to pull the artifact from. Empty = this run.
+      app-name:
+        type: string
+        default: mybasicwebapp
+      resource-group:
+        type: string
+        default: GitHubTraining
+      slot-name:
+        type: string
+        default: canary
+      health-path:
+        type: string
+        default: /home
+        description: Path probed on the canary slot and on production after the swap.
+      canary-traffic-percent:
+        type: number
+        default: 10
+        description: Percentage of production traffic routed to the canary slot while it awaits promotion.
   workflow_dispatch:
     inputs:
       artifact-name:
@@ -24,37 +41,156 @@ on:
       run-id:
         type: string
         description: CI run ID to deploy. Leave blank to use the latest build.
-
+      app-name:
+        type: string
+        default: mybasicwebapp
+      resource-group:
+        type: string
+        default: GitHubTraining
+      slot-name:
+        type: string
+        default: canary
+      health-path:
+        type: string
+        default: /home
+      canary-traffic-percent:
+        type: choice
+        options: ['0', '5', '10', '25', '50']
+        default: '10'
 jobs:
-    deploy:
-        name: Deploy to staging
-        runs-on: self-hosted
-        permissions:
-            id-token: write
-            contents: read
-            actions: read
-        environment:
-            name: ${{ inputs.environment }}
-            url: ${{ steps.deploy.outputs.webapp-url }}
-        steps:
-        - name: Download build output
-          uses: actions/download-artifact@v7
-          with:
-            name: ${{ inputs.artifact-name }}
-            path: ./publish
-            # Omitting run-id means "this run"; the fallback covers both callers.
-            run-id: ${{ inputs.run-id || github.run_id }}
-            github-token: ${{ secrets.GITHUB_TOKEN }}
-        - name: Azure Login
-          uses: azure/login@v1
-          with:
-            creds: ${{ secrets.AZURE_CREDENTIALS }}
-        - name: Deploy to Azure
-          id: deploy
-          uses: azure/webapps-deploy@v3
-          with:
-            app-name: mybasicwebapp
-            package: ./publish
-        - name: Logout
-          if: always()
-          run: az logout
+
+  deploy-canary:
+    name: Deploy to canary slot
+    runs-on: self-hosted
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: Download build output
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ./publish
+          # Omitting run-id means "this run"; the fallback covers both callers.
+          run-id: ${{ inputs.run-id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to canary slot
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ inputs.app-name }}
+          slot-name: ${{ inputs.slot-name }}
+          package: ./publish
+
+      - name: Shift traffic to the canary slot
+        if: inputs.canary-traffic-percent != 0
+        run: |
+          set -euo pipefail
+          az webapp traffic-routing set \
+            --name "${{ inputs.app-name }}" \
+            --resource-group "${{ inputs.resource-group }}" \
+            --distribution "${{ inputs.slot-name }}=${{ inputs.canary-traffic-percent }}"
+          echo "${{ inputs.canary-traffic-percent }}% of production traffic now hits the canary slot."
+
+      - name: Logout
+        if: always()
+        run: az logout
+  
+  promote:
+    name: Promote canary to production
+    needs: deploy-canary
+    runs-on: self-hosted
+    permissions:
+      id-token: write
+      contents: read
+    # Put required reviewers on this environment to make promotion a manual gate.
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.swap.outputs.production-url }}
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Reset traffic routing
+        run: |
+          set -euo pipefail
+          az webapp traffic-routing clear \
+            --name "${{ inputs.app-name }}" \
+            --resource-group "${{ inputs.resource-group }}"
+
+      - name: Swap canary into production
+        id: swap
+        run: |
+          set -euo pipefail
+          az webapp deployment slot swap \
+            --name "${{ inputs.app-name }}" \
+            --resource-group "${{ inputs.resource-group }}" \
+            --slot "${{ inputs.slot-name }}" \
+            --target-slot production
+          host=$(az webapp show \
+            --name "${{ inputs.app-name }}" \
+            --resource-group "${{ inputs.resource-group }}" \
+            --query defaultHostName -o tsv)
+          echo "production-url=https://${host}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify production
+        env:
+          TARGET: ${{ steps.swap.outputs.production-url }}${{ inputs.health-path }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$TARGET" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "Production healthy after swap."
+              exit 0
+            fi
+            echo "Attempt ${attempt}: HTTP ${code}"
+            sleep 10
+          done
+          echo "::error::Production unhealthy after swap. Re-swap to roll back."
+          exit 1
+
+      - name: Logout
+        if: always()
+        run: az logout
+  rollback:
+    name: Roll back traffic
+    needs: [deploy-canary, promote]
+    if: failure()
+    runs-on: self-hosted
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Send all traffic back to production
+        run: |
+          set -euo pipefail
+          az webapp traffic-routing clear \
+            --name "${{ inputs.app-name }}" \
+            --resource-group "${{ inputs.resource-group }}"
+          echo "Traffic routing cleared; production slot serves 100% of requests."
+
+      - name: Note for operators
+        run: |
+          echo "::warning::Canary rolled back. If the swap already completed, run:"
+          echo "az webapp deployment slot swap --name ${{ inputs.app-name }} \
+            --resource-group ${{ inputs.resource-group }} \
+            --slot ${{ inputs.slot-name }} --target-slot production"
+
+      - name: Logout
+        if: always()
+        run: az logout
