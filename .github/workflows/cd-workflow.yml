@@ -133,10 +133,10 @@ jobs:
             --resource-group "${{ inputs.resource-group }}" `
             --slot "${{ inputs.slot-name }}" `
             --target-slot production
-          host=$(az webapp show `
+          $host=az webapp show `
             --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}" `
-            --query defaultHostName -o tsv)
+            --query defaultHostName -o tsv
           echo "production-url=https://${host}" >> "$GITHUB_OUTPUT"
 
       - name: Verify production
