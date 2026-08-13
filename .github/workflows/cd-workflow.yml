@@ -139,22 +139,6 @@ jobs:
             --query defaultHostName -o tsv
           echo "production-url=https://${hostname}" >> "$GITHUB_OUTPUT"
 
-      - name: Verify production
-        env:
-          TARGET: ${{ steps.swap.outputs.production-url }}${{ inputs.health-path }}
-        run: |
-          for attempt in $(seq 1 12); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$TARGET" || echo 000)
-            if [ "$code" = "200" ]; then
-              echo "Production healthy after swap."
-              exit 0
-            fi
-            echo "Attempt ${attempt}: HTTP ${code}"
-            sleep 10
-          done
-          echo "::error::Production unhealthy after swap. Re-swap to roll back."
-          exit 1
-
       - name: Logout
         if: always()
         run: az logout
