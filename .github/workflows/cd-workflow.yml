@@ -92,7 +92,6 @@ jobs:
       - name: Shift traffic to the canary slot
         if: inputs.canary-traffic-percent != 0
         run: |
-          set -euo pipefail
           az webapp traffic-routing set `
             --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}" `
@@ -122,7 +121,6 @@ jobs:
 
       - name: Reset traffic routing
         run: |
-          set -euo pipefail
           az webapp traffic-routing clear `
             --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}"
@@ -130,7 +128,6 @@ jobs:
       - name: Swap canary into production
         id: swap
         run: |
-          set -euo pipefail
           az webapp deployment slot swap `
             --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}" `
@@ -146,7 +143,6 @@ jobs:
         env:
           TARGET: ${{ steps.swap.outputs.production-url }}${{ inputs.health-path }}
         run: |
-          set -euo pipefail
           for attempt in $(seq 1 12); do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$TARGET" || echo 000)
             if [ "$code" = "200" ]; then
@@ -178,7 +174,6 @@ jobs:
 
       - name: Send all traffic back to production
         run: |
-          set -euo pipefail
           az webapp traffic-routing clear `
             --name "${{ inputs.app-name }}" `
             --resource-group "${{ inputs.resource-group }}"
